@@ -8,7 +8,8 @@ Ambiente de demostración **repetible** para mostrarle a clientes cómo **Azure 
 - `scripts/` — Scripts de automatización numerados (01 a 07) para desplegar todo el ambiente de punta a punta, incluyendo onboarding de Arc, instalación de SQL Server/IIS, RBAC del agente, y Defender/alertas.
 - `scenarios/` — Los 4 casos de uso de la demo, cada uno con su `README.md` (guion para el presentador) y su script de disparo (`trigger.json`).
 - `docs/` — Arquitectura explicada para el cliente (`ARCHITECTURE.md`), guía con capturas de ejecución real (`GUIDE.md`), estimación de costos (`COSTOS.md`), y el plan de la Fase 2 (`STAGE2-FOUNDRY-PLAN.md`).
-- `prompts/REDEPLOY.md` — Prompt listo para pegar en una conversación futura con el asistente de IA, para que re-despliegue todo este ambiente de forma autónoma antes de una nueva demo.
+- `prompts/LAUNCH-DEMO.md` — Prompt rápido para dejar la demo lista para mostrar HOY (infra ya existente): enciende VMs, siembra los 4 errores, verifica todo, y entrega el guion exacto para pegar en cada chat. **Este es el que se usa normalmente antes de cada demo.**
+- `prompts/REDEPLOY.md` — Prompt para reconstruir TODA la infraestructura desde cero (solo si algo se eliminó o rompió gravemente).
 
 ## Los 4 casos de uso
 

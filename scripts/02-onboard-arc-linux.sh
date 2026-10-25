@@ -39,12 +39,16 @@ echo "==> STEP A: Installing azcmagent and connecting to Arc (native agent still
 cat > /tmp/onboard-arc-linux-stepA.sh <<REMOTE_SCRIPT
 #!/bin/bash
 set -euo pipefail
+echo "--- Setting MSFT_ARC_TEST (must be set BEFORE install/connect per official Microsoft docs) ---"
+export MSFT_ARC_TEST=true
+sudo systemctl set-environment MSFT_ARC_TEST=true
+
 echo "--- Installing Azure Connected Machine agent ---"
-curl -so /tmp/install_linux_azcmagent.sh https://aka.ms/azcmagent
-sudo bash /tmp/install_linux_azcmagent.sh
+curl -sLo /tmp/install_linux_azcmagent.sh https://aka.ms/azcmagent
+sudo MSFT_ARC_TEST=true bash /tmp/install_linux_azcmagent.sh
 
 echo "--- Connecting to Arc ---"
-sudo azcmagent connect \\
+sudo MSFT_ARC_TEST=true azcmagent connect \\
   --service-principal-id "$APP_ID" \\
   --service-principal-secret "$APP_SECRET" \\
   --resource-group "$RG" \\
