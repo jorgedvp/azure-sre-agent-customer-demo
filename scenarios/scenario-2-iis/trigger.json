@@ -1,0 +1,3 @@
+{
+  "script": "Import-Module WebAdministration; Stop-WebAppPool -Name 'DefaultAppPool'; Start-Sleep -Seconds 2; Get-WebAppPoolState -Name 'DefaultAppPool'; Write-Output 'SCENARIO_2_TRIGGERED'"
+}

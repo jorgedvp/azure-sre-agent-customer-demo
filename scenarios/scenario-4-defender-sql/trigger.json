@@ -1,0 +1,3 @@
+{
+  "script": "export PATH=$PATH:/opt/mssql-tools18/bin\nsqlcmd -S localhost -U sa -P '${SA_PASSWORD}' -C -d DemoDB -Q \"GRANT SELECT ON SCHEMA::dbo TO public;\"\nsqlcmd -S localhost -U sa -P '${SA_PASSWORD}' -C -d DemoDB -W -Q \"SET NOCOUNT ON; SELECT grantee_principal_id, permission_name, state_desc FROM sys.database_permissions WHERE grantee_principal_id = DATABASE_PRINCIPAL_ID('public');\"\necho SCENARIO_4_TRIGGERED"
+}
