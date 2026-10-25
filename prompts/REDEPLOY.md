@@ -71,6 +71,10 @@ Estas son fricciones ya resueltas en la construcción original de esta demo — 
 
 6. **Costos**: dejar el ambiente completo (2 VMs + Defender + Log Analytics) corriendo fuera de las ventanas de demo genera costo continuo innecesario. Ver `docs/COSTOS.md`. Preguntar a Jorge si debe desasignarse (`az vm deallocate`) o eliminarse (`az group delete`) el resource group `rg-sre-customer-demo` al finalizar cada demo.
 
+7. **Las VMs de este ambiente (sandbox MCAP) pueden auto-desasignarse (deallocate) solas**, aparentemente por una política de apagado automático del ambiente (~08:00 UTC observado). Esto se manifiesta como "Arc tarda mucho/no responde" — pero la causa real es que la VM está apagada, no un problema de red o de Arc. **Antes de cualquier sesión de demo o troubleshooting**, verificar primero el estado de energía (`az vm get-instance-view ... PowerState`) antes de asumir un problema de conectividad. Encender ambas VMs (`az vm start`) como primer paso de la checklist de día de demo.
+
+8. **La cola de Run Command de Arc puede atascarse con comandos huérfanos** (estado `Creating` o `Deleting` indefinido) en una máquina específica, bloqueando cualquier comando nuevo contra esa misma VM. Esto ocurre incluso con la VM encendida y Arc en estado `Connected`. El remedio validado es: (a) intentar eliminar los comandos huérfanos vía `az rest --method DELETE`, y si no se limpian, (b) reiniciar la VM (`az vm restart`) — esto fuerza el reinicio del agente de Arc y libera la cola. Dejar varios minutos después del restart antes de reintentar.
+
 ## Variables de entorno esperadas por los scripts
 
 ```bash
