@@ -81,3 +81,23 @@ Para esos casos, la propuesta es: **mismo Arc, mismo inventario de servidores on
 5. Evaluar con el cliente si prefiere este modelo (más control, más esfuerzo de mantenimiento) frente al producto gestionado (menos esfuerzo, menos control granular).
 
 Esta fase se marca explícitamente como **no ejecutada aún** — es el documento de alcance para cuando Jorge decida avanzar con un cliente específico interesado en esta ruta.
+
+---
+
+## ✅ Actualización — Construido y validado (26-oct-2026)
+
+Esta fase ya tiene una **prueba de concepto funcionando en vivo**, en un repo separado y complementario: **[`jorgedvp/azure-sre-agent-foundry-arc`](https://github.com/jorgedvp/azure-sre-agent-foundry-arc)**.
+
+**Lo que se construyó** (resumen — ver el `README.md` y `docs/DEPLOY.md` de ese repo para el detalle completo):
+- Agente custom sobre Microsoft Foundry (modelo `gpt-4o`, function calling), con un frontend de chat propio desplegado en Azure Container Apps.
+- Herramientas reales conectadas al **mismo inventario Arc** de este demo: listar servidores, ver inventario detallado, ejecutar diagnósticos de solo lectura vía Arc Run Command, y documentar hallazgos como GitHub Issues (etiquetados `foundry-poc`, nunca mezclados con los del SRE Agent real).
+- **Nada de este demo (`azure-sre-agent-customer-demo`) fue modificado.** El único cambio fue aditivo: 3 asignaciones de rol nuevas (Reader, Azure Connected Machine Resource Administrator, Log Analytics Reader) sobre una identidad administrada dedicada a la Etapa 2, sin tocar el RBAC del SRE Agent ni de las VMs.
+
+**Validado en vivo end-to-end**:
+- El agente Foundry listó los servidores Arc reales y su estado de conexión.
+- Ejecutó un diagnóstico real (`df -h`) sobre `vm-onprem-sql` vía Arc Run Command, con resultado real.
+- Rechazó correctamente un intento de comando destructivo (`systemctl stop mssql-server`) — tanto por juicio propio del modelo como por el guardrail de código (deny-list de patrones de escritura, documentado como límite de seguridad explícito de esta prueba de concepto).
+- Creó un GitHub Issue real documentando el hallazgo.
+
+Esto confirma la respuesta a la pregunta original de Jorge: **sí, el mismo puente de Azure Arc puede alimentar un "cerebro" distinto al producto SRE Agent** — abriendo la puerta a clientes que necesiten un agente más personalizable (modelo propio, lógica propia, frontend con su marca) sin perder nada de la infraestructura ya validada en este demo.
+
