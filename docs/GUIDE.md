@@ -14,6 +14,68 @@ Ver `docs/ARCHITECTURE.md` para la explicación completa de arquitectura, los re
 
 ---
 
+## Componentes principales de la demo (contexto rápido para el cliente o tu jefe)
+
+Antes de entrar a los casos de uso, conviene ubicar en 1-2 minutos qué es cada pieza. No hace falta un diagrama — basta con esta tabla y el mensaje de abajo.
+
+| Componente | Qué es | Por qué importa |
+|---|---|---|
+| **`vm-onprem-sql`** (Linux, Ubuntu 22.04) | Servidor simulando on-premises, con SQL Server 2022 | Hospeda los casos 1 (SO), 3 (BD) y 4 (seguridad) |
+| **`vm-onprem-iis`** (Windows Server 2022) | Servidor simulando on-premises, con IIS | Hospeda el caso 2 (aplicación web) |
+| **Azure Arc** | El "puente" de conectividad — hace que Azure pueda ver y gestionar estos servidores como si fueran recursos propios, sin que vivan en la nube | Es la pieza central del mensaje: el mismo mecanismo funciona con un servidor físico real del cliente |
+| **Azure SRE Agent** | El agente de IA que diagnostica (vía comandos reales a través de Arc) y propone/ejecuta remediación | El protagonista de la demo |
+| **Log Analytics + Azure Monitor** | Reciben telemetría de los servidores y disparan alertas | De aquí nace el "síntoma" que investiga el agente en un escenario real (en la demo, el operador también puede reportarlo directo para controlar el timing) |
+| **Microsoft Defender for Cloud** (Servers + SQL) | Evalúa seguridad/vulnerabilidades sobre el SQL Arc-conectado | Motor del caso 4 |
+| **Entra ID + Key Vault** | Autenticación sin contraseñas hacia SQL Server (nada de `sa` en texto plano) | Tranquiliza sobre el manejo de credenciales en un entorno productivo real |
+| **Repo de GitHub conectado** | Donde el agente documenta hallazgos (Issues) y propone correcciones (Pull Requests) | Cierra el ciclo: diagnóstico → ticket → propuesta de fix → aprobación humana |
+
+**Mensaje para dar contexto (30 segundos, antes del Paso 0):**
+
+> "Lo que ven acá son dos servidores que se comportan exactamente como los suyos en su datacenter — no viven en Azure, están conectados vía Azure Arc. El agente de IA (Azure SRE Agent) les habla directamente a través de ese puente: puede diagnosticar y, con mi aprobación, corregir problemas reales a nivel de sistema operativo, aplicación web, y base de datos. Todo lo que muestro de acá en adelante es real, no una simulación de pantallas."
+
+---
+
+## Paso 0 — Prueba de alcance (antes de los 4 escenarios)
+
+**Para qué sirve:** antes de entrar de lleno a los 4 casos de incidente, esto demuestra en ~1-2 minutos que el agente **efectivamente llega** a las 3 capas (sistema operativo, aplicación web, base de datos) a través de Arc — con una sola acción de escritura mínima y aprobada en vivo, para dejar clara la mecánica de aprobación antes de los escenarios más largos. Útil tanto para abrir la demo con el cliente como para una muestra rápida a tu jefe.
+
+**Contexto para el cliente:** "Antes de ver los casos de incidente, les muestro algo rápido: el mismo agente llegando en vivo a las tres capas de este servidor on-premises simulado."
+
+### Guion exacto para pegar en el chat (nuevo hilo del SRE Agent)
+
+```
+Before we start the incident scenarios, I want a quick live proof that you can
+reach each layer of our on-premises servers directly via Azure Arc. Please do
+the following and show me the real output for each:
+
+1. On vm-onprem-sql (Linux) - OS layer: run `hostname && uptime && whoami` to
+   prove direct OS-level reach. Then write a small harmless marker file:
+   `echo "Azure SRE Agent reached this OS via Arc - $(date)" >
+   /tmp/sre-agent-proof.txt && cat /tmp/sre-agent-proof.txt`.
+2. On the same machine - database layer: connect to the DemoDB database and
+   run `SELECT @@VERSION, DB_NAME()` to prove direct database reach.
+3. On vm-onprem-iis (Windows) - web application layer: run
+   `Get-WebAppPoolState -Name DefaultAppPool` and `Get-Website` to prove
+   direct IIS reach.
+
+Do not change any application or service configuration - the only write
+action in this check is the harmless marker file in step 1.
+```
+
+### Lo que vas a ver
+
+1. El agente ejecuta los 3 chequeos de solo lectura (hostname/uptime, versión SQL, estado de IIS) sin pedir aprobación — son de solo lectura.
+2. Al llegar al paso de escritura del archivo marcador, el agente **pide tu aprobación** — es el único "cambio" real de este paso, y es inofensivo (un archivo de texto en `/tmp`).
+3. Apruebas → el agente confirma con el contenido real del archivo creado.
+
+### Lo que tú haces
+1. Pegar el texto de arriba en un chat nuevo.
+2. Esperar los 3 resultados (debería tomar menos de 1 minuto, todo de solo lectura).
+3. Aprobar la única acción de escritura (el archivo marcador).
+4. Cerrar con: *"Con esto confirmado, pasamos a los casos reales — cada uno sigue exactamente esta misma mecánica de diagnóstico y aprobación, pero con una remediación de verdad."*
+
+---
+
 ## Escenario 1 — Error de sistema operativo
 
 **Contexto para el cliente:** "Un servicio crítico del sistema operativo está caído en nuestro servidor Linux on-premises."
