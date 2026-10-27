@@ -138,36 +138,36 @@ cause. Do not apply any fix yet - just diagnose first.
 
 ---
 
-## Escenario 3 — Error de base de datos SQL Server (blocking session)
+## Escenario 3 — Error de base de datos SQL Server (servicio detenido)
 
 **Antes de este escenario**, mostrar al cliente el recuadro de seguridad de `docs/ARCHITECTURE.md` sobre Entra ID + Key Vault para la conexión a SQL — tranquiliza al cliente sobre cómo se maneja la autenticación en un entorno productivo real.
 
-**Contexto para el cliente:** "Las actualizaciones a una tabla de pedidos están quedando colgadas — es un clásico blocking session."
+**Contexto para el cliente:** "La aplicación no puede conectarse a la base de datos — las conexiones están fallando o haciendo timeout."
 
 ### Guion exacto para pegar en el chat (nuevo hilo del SRE Agent)
 
 ```
-Our internal app team reports that updates to the Orders table in DemoDB on
-vm-onprem-sql are hanging / timing out. Please investigate the SQL Server
-instance on vm-onprem-sql via Azure Arc and find the root cause. Do not apply
-any fix yet - just diagnose first.
+Our internal app team reports that the application cannot connect to the SQL
+Server instance on vm-onprem-sql - connections are failing/timing out. Please
+investigate via Azure Arc and find the root cause. Do not apply any fix yet -
+just diagnose first.
 ```
 
-> Si el agente no logra autenticarse por no tener la contraseña `sa` (no vive en ningún archivo, por diseño), simplemente indícale: *"As the operator, I'm providing it to you directly: sa password is `<ver prompts/LAUNCH-DEMO.md o pedir al asistente>`"*. En un entorno productivo real este paso no existiría — se usaría autenticación Entra ID + Key Vault sin contraseñas (ver `docs/ARCHITECTURE.md`).
+> Este escenario diagnostica a nivel de sistema operativo (`systemctl`, `journalctl`), no requiere credenciales de SQL (`sa`). Si el agente intenta conectarse con `sqlcmd` primero, es normal — pivotará solo al ver que el servicio está detenido.
 
 ### Lo que vas a ver
 
 | Paso | Captura |
 |---|---|
-| 5. Confirmación final — sesión bloqueadora eliminada, tabla responde | ![Confirmado](screenshots/scenario-3-sql/05-final-confirmed.png) |
+| 5. Confirmación final — servicio `mssql-server` activo, conexiones responden | ![Confirmado](screenshots/scenario-3-sql/05-final-confirmed.png) |
 
-*(Capturas de los pasos intermedios 1-4 pendientes de incorporar en una próxima ejecución — el flujo fue validado completo end-to-end: diagnóstico con `sys.dm_exec_requests`/`sys.dm_exec_sessions`, identificación exacta de la sesión y el SQL bloqueador, propuesta de `KILL <session_id>`, aprobación, ejecución, y verificación de que el UPDATE vuelve a completar instantáneamente.)*
+*(Capturas de los pasos intermedios 1-4 pendientes de incorporar en una próxima ejecución — flujo esperado: diagnóstico con `systemctl status mssql-server` / `journalctl -u mssql-server`, confirmación de que el servicio está `inactive`, propuesta de `systemctl start mssql-server`, aprobación, ejecución, y verificación de que el servicio vuelve a `active (running)` y las conexiones se completan.)*
 
 ### Lo que tú haces
 1. Pegar el texto de arriba.
-2. Si pide la contraseña SA, pedírsela al asistente (fuera de cámara) y pasarla al chat.
-3. Aprobar el `KILL <session_id>` cuando se proponga.
-4. Mostrar la confirmación final (la consulta ahora completa instantáneamente).
+2. Esperar el diagnóstico (estado del servicio + logs).
+3. Aprobar el `systemctl start mssql-server` cuando se proponga.
+4. Mostrar la confirmación final (el servicio vuelve a estar activo).
 
 ---
 

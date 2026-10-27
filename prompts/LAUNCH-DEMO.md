@@ -27,9 +27,10 @@ resumen en una tabla de qué quedó listo y qué debo hacer yo manualmente (si a
    antes de pasar al siguiente:
    a. Escenario 1 (OS) — ver scenarios/scenario-1-os/README.md
    b. Escenario 2 (IIS) — detener DefaultAppPool vía Arc Run Command
-   c. Escenario 3 (SQL) — disparar la blocking session con una ventana de
-      AL MENOS 30 minutos (para tener margen de sobra durante la demo en
-      vivo). Reemplaza la contraseña SA real al construir el script.
+   c. Escenario 3 (SQL) — detener el servicio `mssql-server` vía Arc Run
+      Command (`systemctl stop mssql-server`). No requiere temporizador: el
+      servicio permanece caído indefinidamente hasta que el agente lo
+      reinicie, así que no hay riesgo de que se autocure antes de la demo.
    d. Escenario 4 (Defender) — otorgar el permiso excesivo
       (GRANT SELECT ON SCHEMA::dbo TO public) sobre DemoDB.
 
@@ -37,7 +38,7 @@ resumen en una tabla de qué quedó listo y qué debo hacer yo manualmente (si a
    error está activo:
    - Escenario 1: el síntoma esperado está presente
    - Escenario 2: el sitio IIS no responde (curl/Invoke-WebRequest falla)
-   - Escenario 3: sys.dm_exec_sessions muestra la sesión bloqueadora activa
+   - Escenario 3: systemctl is-active mssql-server devuelve "inactive"
    - Escenario 4: sys.database_permissions muestra el GRANT a public
 
 5. Abre 4 conversaciones NUEVAS en el SRE Agent (sre.azure.com), una por
