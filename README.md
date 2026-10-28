@@ -15,7 +15,7 @@ Ambiente de demostración **repetible** para mostrarle a clientes cómo **Azure 
 
 1. **Error de sistema operativo** — disco lleno en un servidor Linux on-prem simulado.
 2. **Error de aplicación web (IIS)** — Application Pool caído en un servidor Windows on-prem simulado.
-3. **Error de base de datos (SQL Server)** — servicio `mssql-server` detenido.
+3. **Error de base de datos (SQL Server)** — base de datos `DemoDB` puesta en estado OFFLINE.
 4. **Vulnerabilidad de seguridad (Microsoft Defender for SQL)** — detección autónoma + Issue + Pull Request de remediación.
 
 En los 3 primeros, el presentador aprueba la remediación en vivo frente al cliente. En el cuarto, el foco es la detección y generación automática de ticket/PR.

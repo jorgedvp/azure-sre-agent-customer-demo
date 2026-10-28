@@ -27,10 +27,10 @@ resumen en una tabla de qué quedó listo y qué debo hacer yo manualmente (si a
    antes de pasar al siguiente:
    a. Escenario 1 (OS) — ver scenarios/scenario-1-os/README.md
    b. Escenario 2 (IIS) — detener DefaultAppPool vía Arc Run Command
-   c. Escenario 3 (SQL) — detener el servicio `mssql-server` vía Arc Run
-      Command (`systemctl stop mssql-server`). No requiere temporizador: el
-      servicio permanece caído indefinidamente hasta que el agente lo
-      reinicie, así que no hay riesgo de que se autocure antes de la demo.
+   c. Escenario 3 (SQL) — poner `DemoDB` en estado OFFLINE vía Arc Run
+      Command (`ALTER DATABASE DemoDB SET OFFLINE WITH ROLLBACK IMMEDIATE`).
+      Persiste aunque la VM se reinicie o se apague/encienda — no requiere
+      timers ni reintentos de siembra antes de la demo.
    d. Escenario 4 (Defender) — otorgar el permiso excesivo
       (GRANT SELECT ON SCHEMA::dbo TO public) sobre DemoDB.
 
@@ -38,7 +38,7 @@ resumen en una tabla de qué quedó listo y qué debo hacer yo manualmente (si a
    error está activo:
    - Escenario 1: el síntoma esperado está presente
    - Escenario 2: el sitio IIS no responde (curl/Invoke-WebRequest falla)
-   - Escenario 3: systemctl is-active mssql-server devuelve "inactive"
+   - Escenario 3: SELECT state_desc FROM sys.databases WHERE name='DemoDB' devuelve "OFFLINE"
    - Escenario 4: sys.database_permissions muestra el GRANT a public
 
 5. Abre 4 conversaciones NUEVAS en el SRE Agent (sre.azure.com), una por

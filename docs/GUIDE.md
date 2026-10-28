@@ -138,36 +138,35 @@ cause. Do not apply any fix yet - just diagnose first.
 
 ---
 
-## Escenario 3 — Error de base de datos SQL Server (servicio detenido)
+## Escenario 3 — Error de base de datos SQL Server (DemoDB offline)
 
 **Antes de este escenario**, mostrar al cliente el recuadro de seguridad de `docs/ARCHITECTURE.md` sobre Entra ID + Key Vault para la conexión a SQL — tranquiliza al cliente sobre cómo se maneja la autenticación en un entorno productivo real.
 
-**Contexto para el cliente:** "La aplicación no puede conectarse a la base de datos — las conexiones están fallando o haciendo timeout."
+**Contexto para el cliente:** "La aplicación no puede acceder a su base de datos — todas las consultas están fallando."
 
 ### Guion exacto para pegar en el chat (nuevo hilo del SRE Agent)
 
 ```
-Our internal app team reports that the application cannot connect to the SQL
-Server instance on vm-onprem-sql - connections are failing/timing out. Please
-investigate via Azure Arc and find the root cause. Do not apply any fix yet -
-just diagnose first.
+Our internal app team reports that the application cannot access DemoDB on
+vm-onprem-sql - queries are failing. Please investigate via Azure Arc and
+find the root cause. Do not apply any fix yet - just diagnose first.
 ```
 
-> Este escenario diagnostica a nivel de sistema operativo (`systemctl`, `journalctl`), no requiere credenciales de SQL (`sa`). Si el agente intenta conectarse con `sqlcmd` primero, es normal — pivotará solo al ver que el servicio está detenido.
+> Este escenario diagnostica a nivel de SQL (`sys.databases`, log de errores). Si no tiene la contraseña `sa` (no vive en ningún archivo, por diseño), indícale: *"As the operator, I'm providing it to you directly: sa password is `<ver prompts/LAUNCH-DEMO.md o pedir al asistente>`"*.
 
 ### Lo que vas a ver
 
 | Paso | Captura |
 |---|---|
-| 5. Confirmación final — servicio `mssql-server` activo, conexiones responden | ![Confirmado](screenshots/scenario-3-sql/05-final-confirmed.png) |
+| 5. Confirmación final — `DemoDB` vuelve a `ONLINE`, consultas responden | ![Confirmado](screenshots/scenario-3-sql/05-final-confirmed.png) |
 
-*(Capturas de los pasos intermedios 1-4 pendientes de incorporar en una próxima ejecución — flujo esperado: diagnóstico con `systemctl status mssql-server` / `journalctl -u mssql-server`, confirmación de que el servicio está `inactive`, propuesta de `systemctl start mssql-server`, aprobación, ejecución, y verificación de que el servicio vuelve a `active (running)` y las conexiones se completan.)*
+*(Capturas de los pasos intermedios 1-4 pendientes de incorporar en una próxima ejecución — flujo esperado: diagnóstico con `SELECT name, state_desc FROM sys.databases`, confirmación de que `DemoDB` está `OFFLINE`, propuesta de `ALTER DATABASE DemoDB SET ONLINE`, aprobación, ejecución, y verificación de que vuelve a `ONLINE` y las consultas se completan.)*
 
 ### Lo que tú haces
 1. Pegar el texto de arriba.
-2. Esperar el diagnóstico (estado del servicio + logs).
-3. Aprobar el `systemctl start mssql-server` cuando se proponga.
-4. Mostrar la confirmación final (el servicio vuelve a estar activo).
+2. Si pide la contraseña SA, pedírsela al asistente (fuera de cámara) y pasarla al chat.
+3. Aprobar el `ALTER DATABASE DemoDB SET ONLINE` cuando se proponga.
+4. Mostrar la confirmación final (la base vuelve a estar online).
 
 ---
 

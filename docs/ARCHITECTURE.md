@@ -121,7 +121,7 @@ El acceso al SRE Agent se controla en **tres capas independientes**, todas confi
 |---|---|---|---|
 | 1 | Sistema operativo | Servicio crítico detenido / disco con uso crítico | `vm-onprem-sql` (Linux) |
 | 2 | Aplicación web (IIS) | Application Pool detenido / error HTTP 500 recurrente | `vm-onprem-iis` (Windows) |
-| 3 | Base de datos (SQL Server) | Servicio `mssql-server` detenido | `vm-onprem-sql` (Linux) |
+| 3 | Base de datos (SQL Server) | Base de datos `DemoDB` en estado OFFLINE | `vm-onprem-sql` (Linux) |
 | 4 | Seguridad (Defender) | Vulnerabilidad detectada por Microsoft Defender for SQL | `vm-onprem-sql` (Linux) |
 
 En los casos 1–3, el agente diagnostica y **el presentador (Jorge) ejecuta la aprobación de la remediación en vivo** frente al cliente. En el caso 4, el foco es la detección autónoma + generación de Issue/PR (la remediación de una vulnerabilidad real normalmente requiere más contexto/aprobación de seguridad, por lo que el PR propuesto es el entregable central de este caso).

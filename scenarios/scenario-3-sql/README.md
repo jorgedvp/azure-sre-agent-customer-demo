@@ -2,7 +2,9 @@
 
 ## Qué se simula
 
-En el mismo servidor Linux Arc-conectado (`vm-onprem-sql`), SQL Server 2022 hospeda la base `DemoDB`. Se simula un **servicio SQL Server detenido**: el servicio systemd `mssql-server` se detiene directamente, dejando la base completamente inaccesible — causa típica de "la aplicación no puede conectarse / las conexiones fallan" reportada por usuarios finales. Es un error estable y determinista (no depende de ningún temporizador ni se autocura solo), a diferencia del diseño anterior basado en blocking session con `WAITFOR DELAY`, que expiraba antes de poder mostrarse en vivo.
+En el mismo servidor Linux Arc-conectado (`vm-onprem-sql`), SQL Server 2022 hospeda la base `DemoDB`. Se simula la base de datos **`DemoDB` puesta en estado `OFFLINE`** (`ALTER DATABASE DemoDB SET OFFLINE WITH ROLLBACK IMMEDIATE`) — causa típica de "la aplicación no puede acceder a sus datos / las consultas fallan" reportada por usuarios finales.
+
+Este diseño es deliberadamente simple y **persistente de verdad**: el estado `OFFLINE` queda grabado en el catálogo del sistema (`sys.databases`), no depende de ningún proceso en memoria ni de un temporizador. Sobrevive sin cambios aunque la VM se apague/encienda (deallocate/start) o el servicio `mssql-server` se reinicie — a diferencia de los dos diseños anteriores descartados (ver "Nota de diseño" abajo).
 
 ## Cómo se dispara (script de simulación)
 
@@ -10,30 +12,35 @@ En el mismo servidor Linux Arc-conectado (`vm-onprem-sql`), SQL Server 2022 hosp
 az connectedmachine run-command create \
   --resource-group rg-sre-customer-demo \
   --machine-name vm-onprem-sql \
-  --name trigger-scenario-3-sqlservice-down \
+  --name trigger-scenario-3-db-offline \
   --location eastus2 \
   --source @scenarios/scenario-3-sql/trigger.json \
-  --timeout-in-seconds 30
+  --timeout-in-seconds 90
 ```
 
-El script ejecuta `systemctl stop mssql-server` y confirma con `systemctl is-active mssql-server` que el servicio quedó `inactive`. Se mantiene así indefinidamente hasta que el agente lo reinicie.
+El script espera a que `mssql-server` acepte conexiones (reintenta `SELECT 1` hasta 6 veces, útil justo después de encender la VM), ejecuta `ALTER DATABASE DemoDB SET OFFLINE WITH ROLLBACK IMMEDIATE` y confirma con `SELECT name, state_desc FROM sys.databases WHERE name='DemoDB'` que quedó en `OFFLINE`.
 
 ## Lo que el cliente debería ver
 
-1. La aplicación no logra conectarse a SQL Server — las conexiones fallan o hacen timeout.
+1. La aplicación no logra leer/escribir en `DemoDB` — las consultas fallan.
 2. El **SRE Agent investiga** vía Arc Run Command:
-   - Verifica el estado del servicio (`systemctl status mssql-server`)
-   - Confirma que está `inactive`/detenido y revisa el log (`journalctl -u mssql-server`) para la causa
-3. El agente **captura evidencia** (estado del servicio, logs recientes) antes de actuar.
-4. El agente propone la remediación: `systemctl start mssql-server`.
+   - Consulta `sys.databases` y encuentra que `DemoDB` está en estado `OFFLINE`
+   - Revisa el log de errores de SQL Server para confirmar cuándo y por qué cambió el estado
+3. El agente **captura evidencia** (estado de la base, log de errores) antes de actuar.
+4. El agente propone la remediación: `ALTER DATABASE DemoDB SET ONLINE`.
 5. **Jorge aprueba la remediación en vivo**.
-6. El agente ejecuta el reinicio real vía Arc Run Command.
-7. Verificación: el servicio queda `active (running)` y las conexiones vuelven a completarse.
+6. El agente ejecuta el `ALTER DATABASE ... SET ONLINE` real vía Arc Run Command.
+7. Verificación: `sys.databases` muestra `ONLINE` y las consultas de prueba vuelven a completarse.
 
 ## Guion sugerido para el presentador
 
-> "Este caso muestra al agente operando directamente sobre la infraestructura: detecta que el servicio de base de datos está caído, confirma la causa con los logs del sistema, y si yo lo autorizo, lo reinicia para restaurar el servicio. Todo esto corre en un servidor fuera de Azure, por el puente de Arc."
+> "Este caso muestra al agente operando directamente dentro del motor de base de datos: detecta que la base quedó offline, confirma la causa en los logs, y si yo lo autorizo, la vuelve a poner online para restaurar el servicio. Todo esto corre en un servidor fuera de Azure, por el puente de Arc."
 
 ## Nota de diseño
 
-La versión original de este escenario simulaba un **blocking session** (transacción abierta sosteniendo un lock exclusivo). Se descartó porque el disparador usaba un `WAITFOR DELAY` con límite fijo que expiraba solo (se autocuraba) antes de poder mostrarse en una demo en vivo, dejando al agente sin nada que detectar. El nuevo diseño (servicio detenido) no tiene temporizador: permanece caído indefinidamente hasta la remediación real del agente.
+Este escenario pasó por dos iteraciones previas, ambas descartadas por no ser verdaderamente persistentes:
+
+1. **Blocking session** (transacción abierta con `WAITFOR DELAY` sosteniendo un lock exclusivo). Se descartó porque el temporizador fijo expiraba solo (se autocuraba) antes de poder mostrarse en una demo en vivo.
+2. **Servicio `mssql-server` detenido** (`systemctl stop mssql-server`). Se descartó porque **no sobrevive un reinicio de la VM**: al encender la VM de nuevo, systemd vuelve a arrancar el servicio automáticamente (está `enabled`), dejando el escenario "curado" sin que el agente haga nada.
+
+El diseño actual (`DemoDB OFFLINE`) no tiene ninguno de los dos problemas: no hay temporizador y el estado persiste en disco independientemente de si la VM o el servicio se reinician.
